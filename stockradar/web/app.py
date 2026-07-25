@@ -1,15 +1,18 @@
-"""StockRadar Web — 推文浏览 + 大V视角 + 股票视角。"""
+"""StockRadar Web — 推文浏览 + 大V视角 + 股票视角 + S&P 500 市场图。"""
 import sys
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from stockradar.db import get_db
+from stockradar.web.market import router as market_router
 
 app = FastAPI(title="StockRadar")
+app.include_router(market_router)
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 
@@ -17,6 +20,14 @@ def _get_nav(conn):
     return [dict(r) for r in conn.execute(
         "SELECT handle, display_name FROM kol WHERE enabled=1 ORDER BY handle"
     ).fetchall()]
+
+
+@app.get("/market", response_class=HTMLResponse)
+async def market_page(request: Request):
+    conn = get_db()
+    kols = _get_nav(conn)
+    conn.close()
+    return templates.TemplateResponse(request=request, name="market.html", context={"kols": kols})
 
 
 @app.get("/", response_class=HTMLResponse)
