@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}股票视角 - StockRadar{% endblock %}
+{% block nav_stocks %}active{% endblock %}
+{% block content %}
+<div class="page-title">股票视角</div>
+<div class="stats">{{ stocks|length }} 只股票被大V提及</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>股票</th>
+      <th>共识</th>
+      <th>大V数</th>
+      <th>30天提及</th>
+      <th>7天提及</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in stocks %}
+    <tr>
+      <td><a href="/stock/{{ s.ticker }}" style="font-weight:600;font-size:15px;">${{ s.ticker }}</a></td>
+      <td><span class="badge badge-{{ 'bullish' if s.consensus == '看多' else ('bearish' if s.consensus == '看空' else 'neutral') }}">{{ s.consensus }}</span></td>
+      <td>{{ s.kol_count }}</td>
+      <td>{{ s.total_30d }}</td>
+      <td>{{ s.total_7d }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

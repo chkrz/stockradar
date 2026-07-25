@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}${{ ticker }} - StockRadar{% endblock %}
+{% block nav_stocks %}active{% endblock %}
+{% block content %}
+<div class="page-title">${{ ticker }}</div>
+<div class="stats">{{ views|length }} 位大V提及 · {{ opinions|length }} 条相关推文</div>
+
+<div class="grid">
+{% for v in views %}
+<div class="card">
+  <div class="card-header">
+    <a href="/kol/{{ v.handle }}" style="font-weight:600;">{{ v.display_name or v.handle }}</a>
+    <span class="badge badge-{{ v.direction }}">
+      {{ '看多' if v.direction == 'bullish' else ('看空' if v.direction == 'bearish' else '中性') }}
+    </span>
+  </div>
+  <div class="summary-text">{{ v.summary }}</div>
+  <div class="meta">
+    <span>30d: {{ v.mention_count_30d }}条</span>
+    <span>7d: {{ v.mention_count_7d }}条</span>
+  </div>
+</div>
+{% endfor %}
+</div>
+
+<div style="margin-top:24px;">
+  <div class="page-title" style="font-size:16px;">相关推文时间线</div>
+</div>
+{% for o in opinions %}
+<div class="card">
+  <div class="card-header">
+    <span>
+      <a href="/kol/{{ o.handle }}">{{ o.display_name or o.handle }}</a>
+      <span class="badge badge-{{ o.direction }}" style="margin-left:6px;">
+        {{ '看多' if o.direction == 'bullish' else ('看空' if o.direction == 'bearish' else '中性') }}
+      </span>
+    </span>
+    <span style="color:#8b949e;font-size:13px;">{{ o.created_at[:16].replace('T',' ') }}</span>
+  </div>
+  <div style="font-size:13px;color:#7ee787;margin-bottom:4px;">{{ o.summary }}</div>
+  <div class="tweet-content" style="font-size:13px;color:#8b949e;">{{ o.raw_content[:300] }}</div>
+  <div class="meta">
+    <span>❤ {{ o.like_count }}</span>
+    {% if o.url %}<a href="{{ o.url }}" target="_blank">原文↗</a>{% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

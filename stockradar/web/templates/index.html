@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}推文流 - StockRadar{% endblock %}
+{% block nav_tweets %}active{% endblock %}
+{% block content %}
+<form class="topbar" method="get">
+  {% if current_kol %}<input type="hidden" name="kol" value="{{ current_kol }}">{% endif %}
+  <input type="text" name="q" value="{{ q }}" placeholder="搜索推文内容...">
+  <button type="submit">搜索</button>
+</form>
+<div class="stats">
+  {% if current_kol %}@{{ current_kol }} · {% endif %}共 {{ total_count }} 条推文 · 第 {{ page }}/{{ total_pages }} 页
+</div>
+{% for tw in tweets %}
+<div class="card">
+  <div class="card-header">
+    <span><a href="/kol/{{ tw.handle }}" style="font-weight:600;">@{{ tw.handle }}</a> {% if tw.display_name %}<span style="color:#8b949e;">· {{ tw.display_name }}</span>{% endif %}</span>
+    <span style="color:#8b949e;font-size:13px;">{{ tw.created_at[:16].replace('T',' ') }}</span>
+  </div>
+  <div class="tweet-content">{{ tw.raw_content }}</div>
+  <div class="meta">
+    <span>❤ {{ tw.like_count }}</span>
+    <span>🔁 {{ tw.retweet_count }}</span>
+    <span>💬 {{ tw.reply_count }}</span>
+    {% if tw.url %}<a href="{{ tw.url }}" target="_blank">原文↗</a>{% endif %}
+  </div>
+</div>
+{% endfor %}
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% for p in range(1, total_pages+1) %}
+    {% if p == page %}<a class="current">{{ p }}</a>
+    {% else %}<a href="/?kol={{ current_kol }}&q={{ q }}&page={{ p }}">{{ p }}</a>{% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

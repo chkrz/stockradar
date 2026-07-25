@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}@{{ kol.handle }} - StockRadar{% endblock %}
+{% block content %}
+<div class="page-title">@{{ kol.handle }} {% if kol.display_name %}· {{ kol.display_name }}{% endif %}</div>
+<div class="stats">{{ kol.category }} · 关注 {{ views|length }} 只股票</div>
+
+{% if not views %}
+<div class="card"><p style="color:#8b949e;">暂无股票观点数据。请先运行 analyze_tweets.py。</p></div>
+{% endif %}
+
+{% for v in views %}
+<div class="card">
+  <div class="card-header">
+    <span>
+      <a href="/stock/{{ v.ticker }}" style="font-size:18px;font-weight:700;color:#c9d1d9;">${{ v.ticker }}</a>
+      <span class="badge badge-{{ v.direction }}">
+        {{ '看多' if v.direction == 'bullish' else ('看空' if v.direction == 'bearish' else '中性') }}
+      </span>
+    </span>
+    <span>
+      <span class="tag">30d: {{ v.mention_count_30d }}条</span>
+      <span class="tag">7d: {{ v.mention_count_7d }}条</span>
+    </span>
+  </div>
+  <div class="summary-text">{{ v.summary }}</div>
+  <div class="meta">
+    {% if v.first_mentioned_at %}<span>首次提及 {{ v.first_mentioned_at[:10] }}</span>{% endif %}
+    {% if v.last_updated_at %}<span>最后更新 {{ v.last_updated_at[:10] }}</span>{% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}
