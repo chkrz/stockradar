@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from stockradar.db import get_db, upsert_kol, list_kols
+from src.db import get_db, upsert_kol, list_kols
 
 
 def main():

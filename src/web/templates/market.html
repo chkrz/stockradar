@@ -25,6 +25,9 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
 #tooltip .tt-price { margin-top: 4px; }
 #status { position: fixed; bottom: 12px; right: 20px; font-size: 11px; color: #8b949e; }
 #status .live { color: #7ee787; }
+.market-switch { display: inline-flex; gap: 8px; margin-left: 16px; }
+.market-switch a { padding: 3px 10px; border-radius: 4px; font-size: 12px; color: #8b949e; text-decoration: none; border: 1px solid #30363d; }
+.market-switch a.active { background: #238636; color: #fff; border-color: #238636; }
 #back-link { color: #58a6ff; text-decoration: none; font-size: 13px; }
 </style>
 </head>
@@ -32,7 +35,12 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
 <div id="header">
   <div>
     <a id="back-link" href="/">← StockRadar</a>
-    <h1>S&P 500</h1>
+    <h1>S&P 500
+      <span class="market-switch">
+        <a href="/market" class="active">S&P 500</a>
+        <a href="/market/cn">沪深300</a>
+      </span>
+    </h1>
   </div>
   <div class="meta">
     <span id="timestamp"></span>
@@ -42,7 +50,7 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
 <div id="legend"></div>
 <div id="chart"></div>
 <div id="tooltip"><div class="tt-ticker"></div><div class="tt-name"></div><div class="tt-price"></div></div>
-<div id="status"><span class="live" id="ws-status">●</span> Connecting...</div>
+<div id="status"><button id="refresh-btn" style="background:#238636;color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;">刷新</button> <span style="margin-left:8px;color:#8b949e;">30s 自动轮询</span></div>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
@@ -177,16 +185,19 @@ function render(stocks) {
 // Initial load
 fetch('/api/market/snapshot').then(r => r.json()).then(d => render(d.stocks));
 
-// WebSocket
-const wsUrl = `ws://${location.host}/ws/market`;
-let ws;
-function connectWS() {
-  ws = new WebSocket(wsUrl);
-  ws.onopen = () => { document.getElementById('ws-status').parentElement.innerHTML = '<span class="live">●</span> Live (30s refresh)'; };
-  ws.onmessage = (e) => { const d = JSON.parse(e.data); render(d.stocks); };
-  ws.onclose = () => { document.getElementById('ws-status').parentElement.innerHTML = '<span style="color:#f85149">●</span> Disconnected'; setTimeout(connectWS, 5000); };
-}
-connectWS();
+// Poll DB every 30s
+setInterval(() => {
+  fetch('/api/market/snapshot').then(r => r.json()).then(d => render(d.stocks));
+}, 30000);
+
+// Refresh button
+document.getElementById('refresh-btn').onclick = () => {
+  document.getElementById('refresh-btn').textContent = '刷新中...';
+  fetch('/api/market/snapshot').then(r => r.json()).then(d => {
+    render(d.stocks);
+    document.getElementById('refresh-btn').textContent = '刷新';
+  });
+};
 </script>
 </body>
 </html>

@@ -78,6 +78,43 @@ CREATE TABLE IF NOT EXISTS kol_stock_view (
 CREATE INDEX IF NOT EXISTS idx_opinion_kol_ticker ON stock_opinion(kol_id, ticker);
 CREATE INDEX IF NOT EXISTS idx_opinion_ticker ON stock_opinion(ticker);
 CREATE INDEX IF NOT EXISTS idx_view_ticker ON kol_stock_view(ticker);
+
+CREATE TABLE IF NOT EXISTS stock_us (
+    ticker TEXT PRIMARY KEY,
+    name TEXT DEFAULT '',
+    sector TEXT DEFAULT '',
+    market_cap REAL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS stock_cn (
+    code TEXT PRIMARY KEY,
+    name TEXT DEFAULT '',
+    sector TEXT DEFAULT '',
+    market_cap REAL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS snapshot_us (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker TEXT NOT NULL,
+    price REAL DEFAULT 0,
+    change_pct REAL DEFAULT 0,
+    volume REAL DEFAULT 0,
+    market_cap REAL DEFAULT 0,
+    timestamp TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS snapshot_cn (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL,
+    price REAL DEFAULT 0,
+    change_pct REAL DEFAULT 0,
+    volume REAL DEFAULT 0,
+    market_cap REAL DEFAULT 0,
+    timestamp TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_snap_us_ts ON snapshot_us(timestamp);
+CREATE INDEX IF NOT EXISTS idx_snap_cn_ts ON snapshot_cn(timestamp);
 """
 
 

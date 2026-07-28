@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>沪深300 市场地图 - StockRadar</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; }
+#header { padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+#header h1 { font-size: 22px; font-weight: 700; }
+#header .meta { font-size: 13px; color: #8b949e; }
+#header .meta .spy { font-size: 16px; color: #c9d1d9; margin-left: 12px; }
+#legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 24px 8px; }
+.legend-item { font-size: 11px; display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+#chart { width: 100%; height: calc(100vh - 100px); overflow: hidden; }
+.bubble-label { font-size: 10px; fill: #fff; text-anchor: middle; pointer-events: none; font-weight: 600; }
+.axis text { fill: #8b949e; font-size: 11px; }
+.axis line, .axis path { stroke: #30363d; }
+.grid line { stroke: #21262d; stroke-dasharray: 2,2; }
+#tooltip { position: absolute; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 10px 14px; font-size: 13px; pointer-events: none; display: none; z-index: 100; }
+#tooltip .tt-ticker { font-weight: 700; font-size: 15px; }
+#tooltip .tt-name { color: #8b949e; margin-bottom: 4px; }
+#tooltip .tt-price { margin-top: 4px; }
+#status { position: fixed; bottom: 12px; right: 20px; font-size: 11px; color: #8b949e; }
+#status .live { color: #7ee787; }
+#back-link { color: #58a6ff; text-decoration: none; font-size: 13px; }
+.market-switch { display: inline-flex; gap: 8px; margin-left: 16px; }
+.market-switch a { padding: 3px 10px; border-radius: 4px; font-size: 12px; color: #8b949e; text-decoration: none; border: 1px solid #30363d; }
+.market-switch a.active { background: #238636; color: #fff; border-color: #238636; }
+</style>
+</head>
+<body>
+<div id="header">
+  <div>
+    <a id="back-link" href="/">← StockRadar</a>
+    <h1>沪深300
+      <span class="market-switch">
+        <a href="/market">S&P 500</a>
+        <a href="/market/cn" class="active">沪深300</a>
+      </span>
+    </h1>
+  </div>
+  <div class="meta">
+    <span id="timestamp"></span>
+    <span class="spy" id="spy-change"></span>
+  </div>
+</div>
+<div id="legend"></div>
+<div id="chart"></div>
+<div id="tooltip"><div class="tt-ticker"></div><div class="tt-name"></div><div class="tt-price"></div></div>
+<div id="status"><button id="refresh-btn" style="background:#238636;color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;">刷新</button> <span style="margin-left:8px;color:#8b949e;">30s 自动轮询</span></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+const SECTOR_COLORS = {
+  '电子': '#f97583',
+  '计算机': '#ff6b6b',
+  '通信': '#e57373',
+  '医药生物': '#a5d6a7',
+  '食品饮料': '#66bb6a',
+  '农林牧渔': '#43a047',
+  '银行': '#ffab40',
+  '非银金融': '#ffa726',
+  '机械设备': '#90caf9',
+  '电力设备': '#64b5f6',
+  '国防军工': '#42a5f5',
+  '汽车': '#ff8a65',
+  '家用电器': '#ff7043',
+  '有色金属': '#ce93d8',
+  '钢铁': '#ba68c8',
+  '基础化工': '#bcaaa4',
+  '建筑材料': '#a1887f',
+  '建筑装饰': '#8d6e63',
+  '公用事业': '#ffd54f',
+  '交通运输': '#ffca28',
+  '房地产': '#80deea',
+  '商贸零售': '#4dd0e1',
+  '社会服务': '#26c6da',
+  '纺织服饰': '#ef9a9a',
+  '轻工制造': '#f48fb1',
+  '传媒': '#b39ddb',
+  '煤炭': '#78909c',
+  '石油石化': '#607d8b',
+  '环保': '#81c784',
+  '美容护理': '#f8bbd0',
+  '综合': '#9e9e9e',
+};
+
+const SECTOR_ORDER = Object.keys(SECTOR_COLORS);
+
+const legendEl = document.getElementById('legend');
+for (const [sector, color] of Object.entries(SECTOR_COLORS)) {
+  legendEl.innerHTML += `<div class="legend-item"><div class="legend-dot" style="background:${color}"></div>${sector}</div>`;
+}
+
+const margin = { top: 20, right: 40, bottom: 60, left: 50 };
+const width = window.innerWidth - margin.left - margin.right;
+const height = window.innerHeight - 160 - margin.top - margin.bottom;
+
+const svg = d3.select('#chart').append('svg')
+  .attr('width', width + margin.left + margin.right)
+  .attr('height', height + margin.top + margin.bottom)
+  .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+const yScale = d3.scaleLinear().domain([-6, 6]).range([height, 0]);
+
+svg.append('g').attr('class', 'grid')
+  .selectAll('line').data([-4, -2, 0, 2, 4]).enter()
+  .append('line').attr('x1', 0).attr('x2', width)
+  .attr('y1', d => yScale(d)).attr('y2', d => yScale(d));
+
+svg.append('g').attr('class', 'axis')
+  .selectAll('text').data([{v:-6,l:'< -6%'},{v:-4,l:'-4%'},{v:-2,l:'-2%'},{v:0,l:'0%'},{v:2,l:'2%'},{v:4,l:'4%'},{v:6,l:'> 6%'}]).enter()
+  .append('text').attr('x', -8).attr('y', d => yScale(d.v) + 4)
+  .attr('text-anchor', 'end').text(d => d.l);
+
+const tooltip = document.getElementById('tooltip');
+
+function render(stocks) {
+  // Only show sectors that have stocks
+  const activeSectors = [...new Set(stocks.map(s => s.sector))].sort((a,b) => SECTOR_ORDER.indexOf(a) - SECTOR_ORDER.indexOf(b));
+  const xScale = d3.scaleBand().domain(activeSectors).range([0, width]).padding(0.05);
+
+  // Remove old x labels and redraw
+  svg.selectAll('.x-label').remove();
+  svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${height + 16})`)
+    .selectAll('text.x-label').data(activeSectors).enter()
+    .append('text').attr('class', 'x-label')
+    .attr('x', d => xScale(d) + xScale.bandwidth() / 2)
+    .attr('y', 0).attr('text-anchor', 'middle').attr('font-size', '10px')
+    .text(d => d);
+
+  stocks.sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0));
+  const maxCap = d3.max(stocks, d => d.market_cap) || 1;
+  const rScale = d3.scaleSqrt().domain([0, maxCap]).range([2, 36]);
+
+  stocks.forEach(d => {
+    d.r = Math.max(2, rScale(d.market_cap || 0));
+    d.yTarget = yScale(Math.max(-6, Math.min(6, d.change_pct)));
+    d.xTarget = xScale(d.sector) + xScale.bandwidth() / 2;
+  });
+
+  const sim = d3.forceSimulation(stocks)
+    .force('x', d3.forceX(d => d.xTarget).strength(0.8))
+    .force('y', d3.forceY(d => d.yTarget).strength(0.9))
+    .force('collide', d3.forceCollide(d => d.r + 1).strength(0.9))
+    .stop();
+  for (let i = 0; i < 120; i++) {
+    sim.tick();
+    stocks.forEach(d => {
+      d.x = Math.max(d.r, Math.min(width - d.r, d.x));
+      d.y = Math.max(d.r, Math.min(height - d.r, d.y));
+    });
+  }
+
+  const bubbles = svg.selectAll('circle.bubble').data(stocks, d => d.ticker);
+  bubbles.enter().append('circle').attr('class', 'bubble')
+    .attr('opacity', 0.85)
+    .on('mouseover', (e, d) => {
+      tooltip.style.display = 'block';
+      tooltip.querySelector('.tt-ticker').textContent = d.ticker;
+      tooltip.querySelector('.tt-name').textContent = d.name;
+      tooltip.querySelector('.tt-price').innerHTML = `¥${d.price} <span style="color:${d.change_pct >= 0 ? '#f85149' : '#7ee787'}">${d.change_pct >= 0 ? '+' : ''}${d.change_pct.toFixed(2)}%</span>`;
+    })
+    .on('mousemove', (e) => {
+      tooltip.style.left = (e.pageX + 12) + 'px';
+      tooltip.style.top = (e.pageY - 30) + 'px';
+    })
+    .on('mouseout', () => { tooltip.style.display = 'none'; })
+    .merge(bubbles)
+    .transition().duration(600)
+    .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', d => d.r)
+    .attr('fill', d => SECTOR_COLORS[d.sector] || '#666');
+  bubbles.exit().remove();
+
+  const topStocks = stocks.filter(d => d.market_cap > maxCap * 0.05);
+  const labels = svg.selectAll('text.bubble-label').data(topStocks, d => d.ticker);
+  labels.enter().append('text').attr('class', 'bubble-label')
+    .merge(labels).transition().duration(600)
+    .attr('x', d => d.x).attr('y', d => d.y + 3)
+    .text(d => d.name.slice(0, 4));
+  labels.exit().remove();
+
+  document.getElementById('timestamp').textContent = new Date().toLocaleString();
+}
+
+fetch('/api/market/cn/snapshot').then(r => r.json()).then(d => render(d.stocks));
+
+setInterval(() => {
+  fetch('/api/market/cn/snapshot').then(r => r.json()).then(d => render(d.stocks));
+}, 30000);
+
+document.getElementById('refresh-btn').onclick = () => {
+  document.getElementById('refresh-btn').textContent = '刷新中...';
+  fetch('/api/market/cn/snapshot').then(r => r.json()).then(d => {
+    render(d.stocks);
+    document.getElementById('refresh-btn').textContent = '刷新';
+  });
+};
+</script>
+</body>
+</html>

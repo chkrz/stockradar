@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from stockradar.analyzer import run_analysis
+from src.analyzer import run_analysis
 
 
 def main():
