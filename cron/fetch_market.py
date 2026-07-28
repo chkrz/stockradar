@@ -138,9 +138,11 @@ def fetch_cn(conn):
         volume = float(r["成交额"]) if r["成交额"] else 0
         if not price:
             continue
+        cap = conn.execute("SELECT market_cap FROM stock_cn WHERE code=?", (code,)).fetchone()
+        market_cap = cap[0] if cap else 0
         conn.execute(
             "INSERT INTO snapshot_cn (code, price, change_pct, volume, market_cap, timestamp) VALUES (?,?,?,?,?,?)",
-            (code, round(price, 2), round(change, 2), volume, 0, now))
+            (code, round(price, 2), round(change, 2), volume, market_cap, now))
         count += 1
     conn.commit()
     print(f"  snapshot_cn: {count} 条 @ {now[:19]}")

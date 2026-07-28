@@ -9,7 +9,8 @@ router = APIRouter()
 async def cn_snapshot():
     conn = get_db()
     rows = conn.execute(
-        """SELECT s.code as ticker, sc.name, sc.sector, s.price, s.change_pct, sc.market_cap
+        """SELECT s.code as ticker, sc.name, sc.sector, s.price, s.change_pct,
+                  COALESCE(NULLIF(s.market_cap, 0), sc.market_cap) as market_cap
            FROM snapshot_cn s JOIN stock_cn sc ON s.code=sc.code
            WHERE s.timestamp = (SELECT MAX(timestamp) FROM snapshot_cn)"""
     ).fetchall()

@@ -41,9 +41,13 @@ async def fetch_kol_tweets(api: API, kol_row: dict, limit: int = 50) -> list[dic
 
     last_id = kol_row.get("last_tweet_id", 0) or 0
     tweets = []
+    old_count = 0
     async for tw in api.user_tweets(user_id, limit=limit):
         if tw.id <= last_id:
-            break
+            old_count += 1
+            if old_count >= 10:
+                break
+            continue
         tweets.append(_tweet_to_dict(tw, kol_row["id"]))
     return tweets
 

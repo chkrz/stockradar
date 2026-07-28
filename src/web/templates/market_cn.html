@@ -45,12 +45,13 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
   <div class="meta">
     <span id="timestamp"></span>
     <span class="spy" id="spy-change"></span>
+    <button id="refresh-btn" title="刷新" style="background:none;border:none;cursor:pointer;font-size:18px;margin-left:12px;vertical-align:middle;">🔄</button>
   </div>
 </div>
 <div id="legend"></div>
 <div id="chart"></div>
 <div id="tooltip"><div class="tt-ticker"></div><div class="tt-name"></div><div class="tt-price"></div></div>
-<div id="status"><button id="refresh-btn" style="background:#238636;color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;">刷新</button> <span style="margin-left:8px;color:#8b949e;">30s 自动轮询</span></div>
+<div id="status"></div>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
@@ -175,7 +176,7 @@ function render(stocks) {
     .attr('fill', d => SECTOR_COLORS[d.sector] || '#666');
   bubbles.exit().remove();
 
-  const topStocks = stocks.filter(d => d.market_cap > maxCap * 0.05);
+  const topStocks = stocks.filter(d => d.market_cap > maxCap * 0.15);
   const labels = svg.selectAll('text.bubble-label').data(topStocks, d => d.ticker);
   labels.enter().append('text').attr('class', 'bubble-label')
     .merge(labels).transition().duration(600)
