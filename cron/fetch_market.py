@@ -154,7 +154,60 @@ def cleanup_old_snapshots(conn, keep_hours=48):
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=keep_hours)).isoformat()
     conn.execute("DELETE FROM snapshot_us WHERE timestamp < ?", (cutoff,))
     conn.execute("DELETE FROM snapshot_cn WHERE timestamp < ?", (cutoff,))
+    conn.execute("DELETE FROM snapshot_hk WHERE timestamp < ?", (cutoff,))
     conn.commit()
+
+
+def init_stock_hk(conn):
+    """从 hstech.json 初始化港股主表。"""
+    count = conn.execute("SELECT COUNT(*) FROM stock_hk").fetchone()[0]
+    if count > 0:
+        return
+    hk_path = DATA_DIR / "hstech.json"
+    if not hk_path.exists():
+        print("  [跳过] data/hstech.json 不存在")
+        return
+    with open(hk_path) as f:
+        stocks = json.load(f)
+    for s in stocks:
+        conn.execute("INSERT OR IGNORE INTO stock_hk (code, name, sector) VALUES (?,?,?)",
+                     (s["code"], s["name"], s.get("sector", "")))
+    conn.commit()
+    print(f"  初始化 stock_hk: {len(stocks)} 只(恒生科技)")
+
+
+def fetch_hk(conn):
+    """拉恒生科技快照写入 snapshot_hk。"""
+    import akshare as ak
+
+    codes = [r[0] for r in conn.execute("SELECT code FROM stock_hk").fetchall()]
+    if not codes:
+        print("  stock_hk 为空,先初始化")
+        init_stock_hk(conn)
+        codes = [r[0] for r in conn.execute("SELECT code FROM stock_hk").fetchall()]
+
+    code_set = set(codes)
+    now = datetime.now(timezone.utc).isoformat()
+
+    df = ak.stock_hk_spot()
+    df["code5"] = df["代码"].astype(str).str.zfill(5)
+    df = df[df["code5"].isin(code_set)]
+
+    count = 0
+    for _, r in df.iterrows():
+        code = r["code5"]
+        price = float(r["最新价"]) if r["最新价"] else 0
+        change = float(r["涨跌幅"]) if r["涨跌幅"] else 0
+        if not price:
+            continue
+        cap = conn.execute("SELECT market_cap FROM stock_hk WHERE code=?", (code,)).fetchone()
+        market_cap = cap[0] if cap else 0
+        conn.execute(
+            "INSERT INTO snapshot_hk (code, price, change_pct, volume, market_cap, timestamp) VALUES (?,?,?,?,?,?)",
+            (code, round(price, 2), round(change, 2), 0, market_cap, now))
+        count += 1
+    conn.commit()
+    print(f"  snapshot_hk: {count} 条 @ {now[:19]}")
 
 
 def main():
@@ -172,6 +225,9 @@ def main():
     if market in ("cn", "all"):
         print("拉取A股...")
         fetch_cn(conn)
+    if market in ("hk", "all"):
+        print("拉取港股...")
+        fetch_hk(conn)
 
     cleanup_old_snapshots(conn)
     conn.close()

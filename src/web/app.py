@@ -17,10 +17,12 @@ load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 from src.db import get_db
 from src.web.market import router as market_router
 from src.web.market_cn import router as market_cn_router
+from src.web.market_hk import router as market_hk_router
 
 app = FastAPI(title="StockRadar")
 app.include_router(market_router)
 app.include_router(market_cn_router)
+app.include_router(market_hk_router)
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 security = HTTPBasic()
@@ -57,8 +59,30 @@ async def market_cn_page(request: Request, _=Depends(_check_auth)):
     return templates.TemplateResponse(request=request, name="market_cn.html", context={"kols": kols})
 
 
+@app.get("/market/hk", response_class=HTMLResponse)
+async def market_hk_page(request: Request, _=Depends(_check_auth)):
+    conn = get_db()
+    kols = _get_nav(conn)
+    conn.close()
+    return templates.TemplateResponse(request=request, name="market_hk.html", context={"kols": kols})
+
+
 @app.get("/", response_class=HTMLResponse)
-async def index(
+async def home(request: Request, _=Depends(_check_auth)):
+    conn = get_db()
+    kol_count = conn.execute("SELECT COUNT(*) FROM kol WHERE enabled=1").fetchone()[0]
+    tweet_count = conn.execute("SELECT COUNT(*) FROM tweet").fetchone()[0]
+    opinion_count = conn.execute("SELECT COUNT(*) FROM stock_opinion").fetchone()[0]
+    stock_count = conn.execute("SELECT COUNT(*) FROM kol_stock_view").fetchone()[0]
+    conn.close()
+    return templates.TemplateResponse(request=request, name="home.html", context={
+        "kol_count": kol_count, "tweet_count": tweet_count,
+        "opinion_count": opinion_count, "stock_count": stock_count,
+    })
+
+
+@app.get("/tweets", response_class=HTMLResponse)
+async def tweets_feed(
     request: Request,
     kol: str = Query("", description="按 handle 过滤"),
     q: str = Query("", description="关键词搜索"),

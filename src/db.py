@@ -115,6 +115,25 @@ CREATE TABLE IF NOT EXISTS snapshot_cn (
 
 CREATE INDEX IF NOT EXISTS idx_snap_us_ts ON snapshot_us(timestamp);
 CREATE INDEX IF NOT EXISTS idx_snap_cn_ts ON snapshot_cn(timestamp);
+
+CREATE TABLE IF NOT EXISTS stock_hk (
+    code TEXT PRIMARY KEY,
+    name TEXT DEFAULT '',
+    sector TEXT DEFAULT '',
+    market_cap REAL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS snapshot_hk (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL,
+    price REAL DEFAULT 0,
+    change_pct REAL DEFAULT 0,
+    volume REAL DEFAULT 0,
+    market_cap REAL DEFAULT 0,
+    timestamp TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_snap_hk_ts ON snapshot_hk(timestamp);
 """
 
 

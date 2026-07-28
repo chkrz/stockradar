@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StockRadar</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+
+nav { position: fixed; top: 0; width: 100%; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; z-index: 100; background: rgba(13,17,23,0.8); backdrop-filter: blur(12px); border-bottom: 1px solid #21262d; }
+nav .logo { font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+nav .logo span { color: #58a6ff; }
+nav .links { display: flex; gap: 28px; }
+nav .links a { color: #8b949e; text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
+nav .links a:hover { color: #fff; }
+
+.hero { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(ellipse at 30% 50%, rgba(88,166,255,0.08) 0%, transparent 50%), radial-gradient(ellipse at 70% 50%, rgba(126,231,135,0.06) 0%, transparent 50%); animation: drift 20s ease-in-out infinite; }
+@keyframes drift { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-3%,2%); } }
+
+.hero h1 { font-size: 72px; font-weight: 800; letter-spacing: -2px; line-height: 1.1; margin-bottom: 20px; position: relative; }
+.hero h1 .accent { background: linear-gradient(135deg, #58a6ff, #7ee787); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hero p { font-size: 20px; color: #8b949e; max-width: 500px; line-height: 1.6; position: relative; }
+
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 900px; margin: 60px auto 0; padding: 0 20px; position: relative; }
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 28px; text-decoration: none; color: #c9d1d9; transition: all 0.3s; }
+.card:hover { border-color: #58a6ff; transform: translateY(-4px); box-shadow: 0 8px 30px rgba(88,166,255,0.1); }
+.card h3 { font-size: 18px; margin-bottom: 8px; color: #fff; }
+.card p { font-size: 13px; color: #8b949e; line-height: 1.5; }
+.card .icon { font-size: 28px; margin-bottom: 12px; }
+
+.stats-bar { position: fixed; bottom: 0; width: 100%; padding: 10px 40px; background: rgba(13,17,23,0.9); backdrop-filter: blur(8px); border-top: 1px solid #21262d; display: flex; gap: 32px; font-size: 13px; color: #8b949e; }
+.stats-bar .stat { display: flex; align-items: center; gap: 6px; }
+.stats-bar .num { color: #c9d1d9; font-weight: 600; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">Stock<span>Radar</span></div>
+  <div class="links">
+    <a href="/market">S&P 500</a>
+    <a href="/market/cn">沪深300</a>
+    <a href="/stocks">Insights</a>
+    <a href="/tweets">Feed</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>See the market.<br><span class="accent">Before it moves.</span></h1>
+  <p>Track what top investors are watching. Real-time market visualization meets KOL intelligence.</p>
+
+  <div class="cards">
+    <a class="card" href="/market">
+      <div class="icon">◉</div>
+      <h3>Market Map</h3>
+      <p>S&P 500 / HS300 real-time bubble chart. See sector movements at a glance.</p>
+    </a>
+    <a class="card" href="/stocks">
+      <div class="icon">◈</div>
+      <h3>KOL Insights</h3>
+      <p>What are top traders watching? Bullish or bearish? Opinion tracking.</p>
+    </a>
+    <a class="card" href="/tweets">
+      <div class="icon">◇</div>
+      <h3>Tweet Feed</h3>
+      <p>Raw tweet stream. Filter by KOL, keyword, or time.</p>
+    </a>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat">KOL <span class="num">{{ kol_count }}</span></div>
+  <div class="stat">Tweets <span class="num">{{ tweet_count }}</span></div>
+  <div class="stat">Opinions <span class="num">{{ opinion_count }}</span></div>
+  <div class="stat">Stocks tracked <span class="num">{{ stock_count }}</span></div>
+</div>
+</body>
+</html>

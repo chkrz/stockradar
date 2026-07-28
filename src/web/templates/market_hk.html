@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>S&P 500 Market Map - StockRadar</title>
+<title>HSTECH 市场地图 - StockRadar</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; }
@@ -11,11 +11,11 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
 #header h1 { font-size: 22px; font-weight: 700; }
 #header .meta { font-size: 13px; color: #8b949e; }
 #header .meta .spy { font-size: 16px; color: #c9d1d9; margin-left: 12px; }
-#legend { display: flex; gap: 16px; flex-wrap: wrap; padding: 0 24px 8px; }
-.legend-item { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+#legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 24px 8px; }
+.legend-item { font-size: 11px; display: flex; align-items: center; gap: 4px; }
 .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 #chart { width: 100%; height: calc(100vh - 100px); overflow: hidden; }
-.bubble-label { font-size: 11px; fill: #fff; text-anchor: middle; pointer-events: none; font-weight: 600; }
+.bubble-label { font-size: 10px; fill: #fff; text-anchor: middle; pointer-events: none; font-weight: 600; }
 .axis text { fill: #8b949e; font-size: 13px; }
 .axis line, .axis path { stroke: #30363d; }
 .grid line { stroke: #21262d; stroke-dasharray: 2,2; }
@@ -25,27 +25,26 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
 #tooltip .tt-price { margin-top: 4px; }
 #status { position: fixed; bottom: 12px; right: 20px; font-size: 11px; color: #8b949e; }
 #status .live { color: #7ee787; }
+#back-link { color: #58a6ff; text-decoration: none; font-size: 13px; }
 .market-switch { display: inline-flex; gap: 8px; margin-left: 16px; }
 .market-switch a { padding: 3px 10px; border-radius: 4px; font-size: 12px; color: #8b949e; text-decoration: none; border: 1px solid #30363d; }
 .market-switch a.active { background: #238636; color: #fff; border-color: #238636; }
-#back-link { color: #58a6ff; text-decoration: none; font-size: 13px; }
 </style>
 </head>
 <body>
 <div id="header">
   <div>
     <a id="back-link" href="/">← StockRadar</a>
-    <h1>S&P 500
+    <h1>HSTECH
       <span class="market-switch">
-        <a href="/market" class="active">S&P 500</a>
+        <a href="/market">S&P 500</a>
         <a href="/market/cn">HS300</a>
-        <a href="/market/hk">HSTECH</a>
+        <a href="/market/hk" class="active">HSTECH</a>
       </span>
     </h1>
   </div>
   <div class="meta">
     <span id="timestamp"></span>
-    <span class="spy" id="spy-change"></span>
     <span style="color:#30363d;margin-left:8px;font-size:11px;">30s auto</span>
   </div>
 </div>
@@ -57,28 +56,32 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
 const SECTOR_COLORS = {
-  'Information Technology': '#f97583',
-  'Health Care': '#a5d6a7',
-  'Financials': '#ffab40',
-  'Consumer Discretionary': '#ff8a65',
-  'Communication Services': '#ce93d8',
-  'Industrials': '#90caf9',
-  'Consumer Staples': '#4caf50',
-  'Energy': '#2196f3',
-  'Utilities': '#ffd54f',
-  'Real Estate': '#80deea',
-  'Materials': '#bcaaa4',
+  '互联网': '#f97583',
+  '电商': '#ff8a65',
+  '本地生活': '#ffab40',
+  '消费电子': '#ce93d8',
+  '游戏': '#90caf9',
+  '社交': '#64b5f6',
+  '半导体': '#7ee787',
+  'AI/搜索': '#ff6b6b',
+  'AI': '#e57373',
+  '新能源车': '#4dd0e1',
+  '金融科技': '#ffd54f',
+  '内容': '#b39ddb',
+  '企业软件': '#80deea',
+  '医疗健康': '#a5d6a7',
+  '数据中心': '#bcaaa4',
+  '旅游': '#ffca28',
+  '教育': '#9e9e9e',
 };
 
 const SECTOR_ORDER = Object.keys(SECTOR_COLORS);
 
-// Legend
 const legendEl = document.getElementById('legend');
 for (const [sector, color] of Object.entries(SECTOR_COLORS)) {
   legendEl.innerHTML += `<div class="legend-item"><div class="legend-dot" style="background:${color}"></div>${sector}</div>`;
 }
 
-// Chart setup
 const margin = { top: 20, right: 40, bottom: 60, left: 50 };
 const width = window.innerWidth - margin.left - margin.right;
 const height = window.innerHeight - 160 - margin.top - margin.bottom;
@@ -88,52 +91,49 @@ const svg = d3.select('#chart').append('svg')
   .attr('height', height + margin.top + margin.bottom)
   .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
-const xScale = d3.scaleBand().domain(SECTOR_ORDER).range([0, width]).padding(0.1);
 const yScale = d3.scaleLinear().domain([-6, 6]).range([height, 0]);
 
-// Grid
 svg.append('g').attr('class', 'grid')
   .selectAll('line').data([-4, -2, 0, 2, 4]).enter()
-  .append('line')
-  .attr('x1', 0).attr('x2', width)
+  .append('line').attr('x1', 0).attr('x2', width)
   .attr('y1', d => yScale(d)).attr('y2', d => yScale(d));
 
-// Y axis labels
 svg.append('g').attr('class', 'axis')
   .selectAll('text').data([{v:-6,l:'< -6%'},{v:-4,l:'-4%'},{v:-2,l:'-2%'},{v:0,l:'0%'},{v:2,l:'2%'},{v:4,l:'4%'},{v:6,l:'> 6%'}]).enter()
   .append('text').attr('x', -8).attr('y', d => yScale(d.v) + 4)
   .attr('text-anchor', 'end').text(d => d.l);
 
-// X axis labels
-svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${height + 16})`)
-  .selectAll('text').data(SECTOR_ORDER).enter()
-  .append('text')
-  .attr('x', d => xScale(d) + xScale.bandwidth() / 2)
-  .attr('y', 0).attr('text-anchor', 'middle')
-  .text(d => d.replace('Information Technology', 'Info Tech').replace('Consumer Discretionary', 'Cons. Disc.').replace('Consumer Staples', 'Cons. Staples').replace('Communication Services', 'Comm. Svcs'));
-
 const tooltip = document.getElementById('tooltip');
 
 function render(stocks) {
+  // Only show sectors that have stocks
+  const activeSectors = [...new Set(stocks.map(s => s.sector))].sort((a,b) => SECTOR_ORDER.indexOf(a) - SECTOR_ORDER.indexOf(b));
+  const xScale = d3.scaleBand().domain(activeSectors).range([0, width]).padding(0.05);
+
+  // Remove old x labels and redraw
+  svg.selectAll('.x-label').remove();
+  svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${height + 16})`)
+    .selectAll('text.x-label').data(activeSectors).enter()
+    .append('text').attr('class', 'x-label')
+    .attr('x', d => xScale(d) + xScale.bandwidth() / 2)
+    .attr('y', 0).attr('text-anchor', 'middle').attr('font-size', '12px')
+    .text(d => d);
+
   stocks.sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0));
   const maxCap = d3.max(stocks, d => d.market_cap) || 1;
-  const rScale = d3.scaleSqrt().domain([0, maxCap]).range([2, 48]);
+  const rScale = d3.scaleSqrt().domain([0, maxCap]).range([2, 36]);
 
-  // Clamp change_pct to ±6 for positioning
   stocks.forEach(d => {
     d.r = Math.max(2, rScale(d.market_cap || 0));
     d.yTarget = yScale(Math.max(-6, Math.min(6, d.change_pct)));
     d.xTarget = xScale(d.sector) + xScale.bandwidth() / 2;
   });
 
-  // Force simulation for compact layout
   const sim = d3.forceSimulation(stocks)
     .force('x', d3.forceX(d => d.xTarget).strength(0.8))
     .force('y', d3.forceY(d => d.yTarget).strength(0.9))
     .force('collide', d3.forceCollide(d => d.r + 1).strength(0.9))
     .stop();
-
-  // Run simulation synchronously, clamp to bounds
   for (let i = 0; i < 120; i++) {
     sim.tick();
     stocks.forEach(d => {
@@ -142,15 +142,14 @@ function render(stocks) {
     });
   }
 
-  // Draw bubbles
   const bubbles = svg.selectAll('circle.bubble').data(stocks, d => d.ticker);
   bubbles.enter().append('circle').attr('class', 'bubble')
     .attr('opacity', 0.85)
     .on('mouseover', (e, d) => {
       tooltip.style.display = 'block';
-      tooltip.querySelector('.tt-ticker').textContent = `$${d.ticker}`;
+      tooltip.querySelector('.tt-ticker').textContent = d.ticker;
       tooltip.querySelector('.tt-name').textContent = d.name;
-      tooltip.querySelector('.tt-price').innerHTML = `$${d.price} <span style="color:${d.change_pct >= 0 ? '#7ee787' : '#f85149'}">${d.change_pct >= 0 ? '+' : ''}${d.change_pct.toFixed(2)}%</span>`;
+      tooltip.querySelector('.tt-price').innerHTML = `¥${d.price} <span style="color:${d.change_pct >= 0 ? '#f85149' : '#7ee787'}">${d.change_pct >= 0 ? '+' : ''}${d.change_pct.toFixed(2)}%</span>`;
     })
     .on('mousemove', (e) => {
       tooltip.style.left = (e.pageX + 12) + 'px';
@@ -159,37 +158,25 @@ function render(stocks) {
     .on('mouseout', () => { tooltip.style.display = 'none'; })
     .merge(bubbles)
     .transition().duration(600)
-    .attr('cx', d => d.x)
-    .attr('cy', d => d.y)
-    .attr('r', d => d.r)
+    .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', d => d.r)
     .attr('fill', d => SECTOR_COLORS[d.sector] || '#666');
   bubbles.exit().remove();
 
-  // Labels only for top ~15 largest
-  const topStocks = stocks.filter(d => d.market_cap > maxCap * 0.08);
+  const topStocks = stocks.filter(d => d.market_cap > maxCap * 0.15);
   const labels = svg.selectAll('text.bubble-label').data(topStocks, d => d.ticker);
   labels.enter().append('text').attr('class', 'bubble-label')
-    .merge(labels)
-    .transition().duration(600)
-    .attr('x', d => d.x)
-    .attr('y', d => d.y + 4)
-    .text(d => d.ticker);
+    .merge(labels).transition().duration(600)
+    .attr('x', d => d.x).attr('y', d => d.y + 3)
+    .text(d => d.name.slice(0, 4));
   labels.exit().remove();
 
-  // SPY
-  const spy = stocks.find(s => s.ticker === 'SPY');
-  if (spy) {
-    document.getElementById('spy-change').textContent = `SPY ${spy.change_pct >= 0 ? '+' : ''}${spy.change_pct.toFixed(2)}%`;
-  }
   document.getElementById('timestamp').textContent = new Date().toLocaleString();
 }
 
-// Initial load
-fetch('/api/market/snapshot').then(r => r.json()).then(d => render(d.stocks));
+fetch('/api/market/hk/snapshot').then(r => r.json()).then(d => render(d.stocks));
 
-// Poll DB every 30s
 setInterval(() => {
-  fetch('/api/market/snapshot').then(r => r.json()).then(d => render(d.stocks));
+  fetch('/api/market/hk/snapshot').then(r => r.json()).then(d => render(d.stocks));
 }, 30000);
 </script>
 </body>
