@@ -192,14 +192,6 @@ fetch('/api/market/cn/snapshot').then(r => r.json()).then(d => render(d.stocks))
 setInterval(() => {
   fetch('/api/market/cn/snapshot').then(r => r.json()).then(d => render(d.stocks));
 }, 30000);
-
-document.getElementById('refresh-btn').onclick = () => {
-  document.getElementById('refresh-btn').textContent = '刷新中...';
-  fetch('/api/market/cn/snapshot').then(r => r.json()).then(d => {
-    render(d.stocks);
-    document.getElementById('refresh-btn').textContent = '刷新';
-  });
-};
 </script>
 </body>
 </html>
