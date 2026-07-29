@@ -1,14 +1,10 @@
-"""StockRadar Web — 推文浏览 + 大V视角 + 股票视角 + S&P 500 市场图。"""
-import os
-import secrets
+"""StockRadar Web — 推文浏览 + 大V视角 + 股票视角 + 市场地图。"""
 import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, Query, Depends, HTTPException, status
+from fastapi import FastAPI, Request, Query
 from fastapi.responses import HTMLResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
@@ -25,17 +21,6 @@ app.include_router(market_cn_router)
 app.include_router(market_hk_router)
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
-security = HTTPBasic()
-AUTH_PASSWORD = os.getenv("AUTH_PASSWORD", "stockradar")
-
-
-def _check_auth(credentials: HTTPBasicCredentials = Depends(security)):
-    if not secrets.compare_digest(credentials.password, AUTH_PASSWORD):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Incorrect password",
-                            headers={"WWW-Authenticate": "Basic"})
-    return credentials.username
-
 
 def _get_nav(conn):
     return [dict(r) for r in conn.execute(
@@ -44,7 +29,7 @@ def _get_nav(conn):
 
 
 @app.get("/market", response_class=HTMLResponse)
-async def market_page(request: Request, _=Depends(_check_auth)):
+async def market_page(request: Request):
     conn = get_db()
     kols = _get_nav(conn)
     conn.close()
@@ -52,7 +37,7 @@ async def market_page(request: Request, _=Depends(_check_auth)):
 
 
 @app.get("/market/cn", response_class=HTMLResponse)
-async def market_cn_page(request: Request, _=Depends(_check_auth)):
+async def market_cn_page(request: Request):
     conn = get_db()
     kols = _get_nav(conn)
     conn.close()
@@ -60,7 +45,7 @@ async def market_cn_page(request: Request, _=Depends(_check_auth)):
 
 
 @app.get("/market/hk", response_class=HTMLResponse)
-async def market_hk_page(request: Request, _=Depends(_check_auth)):
+async def market_hk_page(request: Request):
     conn = get_db()
     kols = _get_nav(conn)
     conn.close()
@@ -68,7 +53,7 @@ async def market_hk_page(request: Request, _=Depends(_check_auth)):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request, _=Depends(_check_auth)):
+async def home(request: Request):
     conn = get_db()
     kol_count = conn.execute("SELECT COUNT(*) FROM kol WHERE enabled=1").fetchone()[0]
     tweet_count = conn.execute("SELECT COUNT(*) FROM tweet").fetchone()[0]
@@ -87,7 +72,6 @@ async def tweets_feed(
     kol: str = Query("", description="按 handle 过滤"),
     q: str = Query("", description="关键词搜索"),
     page: int = Query(1, ge=1),
-    _=Depends(_check_auth),
 ):
     per_page = 50
     conn = get_db()
@@ -123,7 +107,7 @@ async def tweets_feed(
 
 
 @app.get("/kol/{handle}", response_class=HTMLResponse)
-async def kol_view(request: Request, handle: str, _=Depends(_check_auth)):
+async def kol_view(request: Request, handle: str):
     conn = get_db()
     kols = _get_nav(conn)
     kol = conn.execute("SELECT * FROM kol WHERE handle=?", (handle.lower(),)).fetchone()
@@ -144,7 +128,7 @@ async def kol_view(request: Request, handle: str, _=Depends(_check_auth)):
 
 
 @app.get("/stocks", response_class=HTMLResponse)
-async def stocks_list(request: Request, _=Depends(_check_auth)):
+async def stocks_list(request: Request):
     conn = get_db()
     kols = _get_nav(conn)
 
@@ -172,7 +156,7 @@ async def stocks_list(request: Request, _=Depends(_check_auth)):
 
 
 @app.get("/stock/{ticker}", response_class=HTMLResponse)
-async def stock_view(request: Request, ticker: str, _=Depends(_check_auth)):
+async def stock_view(request: Request, ticker: str):
     conn = get_db()
     kols = _get_nav(conn)
     ticker = ticker.upper()
