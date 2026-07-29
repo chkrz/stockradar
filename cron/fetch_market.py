@@ -52,17 +52,19 @@ def init_stock_us(conn):
 
 
 def init_stock_cn(conn):
-    """从 AkShare 初始化 A 股主表(沪深300)。"""
+    """从 AkShare 初始化 A 股主表(沪深300),含市值。"""
     count = conn.execute("SELECT COUNT(*) FROM stock_cn").fetchone()[0]
     if count > 0:
         return
     import akshare as ak
+    import yfinance as yf
     df = ak.index_stock_cons_csindex(symbol="000300")
     industry_path = DATA_DIR / "sw_industry_map.json"
     industry_map = {}
     if industry_path.exists():
         with open(industry_path) as f:
             industry_map = json.load(f)
+    codes = []
     for _, row in df.iterrows():
         code = str(row["成分券代码"]).zfill(6)
         name = row["成分券名称"]
@@ -70,8 +72,24 @@ def init_stock_cn(conn):
         conn.execute(
             "INSERT OR IGNORE INTO stock_cn (code, name, sector) VALUES (?,?,?)",
             (code, name, sector))
+        codes.append(code)
     conn.commit()
     print(f"  初始化 stock_cn: {len(df)} 只(沪深300)")
+    # 拉市值
+    print("  拉取市值...")
+    for i in range(0, len(codes), 50):
+        batch = codes[i:i+50]
+        symbols = " ".join(c + (".SS" if c.startswith("6") else ".SZ") for c in batch)
+        tickers = yf.Tickers(symbols)
+        for code in batch:
+            sym = code + (".SS" if code.startswith("6") else ".SZ")
+            try:
+                cap = tickers.tickers[sym].fast_info.get("marketCap", 0) or 0
+                if cap > 0:
+                    conn.execute("UPDATE stock_cn SET market_cap=? WHERE code=?", (cap, code))
+            except:
+                pass
+        conn.commit()
 
 
 def fetch_us(conn):
@@ -158,10 +176,11 @@ def cleanup_old_snapshots(conn, keep_hours=48):
 
 
 def init_stock_hk(conn):
-    """从 hstech.json 初始化港股主表。"""
+    """从 hstech.json 初始化港股主表,含市值。"""
     count = conn.execute("SELECT COUNT(*) FROM stock_hk").fetchone()[0]
     if count > 0:
         return
+    import yfinance as yf
     hk_path = DATA_DIR / "hstech.json"
     if not hk_path.exists():
         print("  [跳过] data/hstech.json 不存在")
@@ -173,6 +192,18 @@ def init_stock_hk(conn):
                      (s["code"], s["name"], s.get("sector", "")))
     conn.commit()
     print(f"  初始化 stock_hk: {len(stocks)} 只(恒生科技)")
+    # 拉市值
+    print("  拉取市值...")
+    for s in stocks:
+        code = s["code"]
+        sym = code[-4:] + ".HK"
+        try:
+            cap = yf.Ticker(sym).fast_info.get("marketCap", 0) or 0
+            if cap > 0:
+                conn.execute("UPDATE stock_hk SET market_cap=? WHERE code=?", (cap, code))
+        except:
+            pass
+    conn.commit()
 
 
 def fetch_hk(conn):
