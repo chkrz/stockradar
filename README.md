@@ -33,9 +33,11 @@ stockradar/
 ## Quick Start
 
 ```bash
-# Environment
-python3 -m venv .venv
-.venv/bin/pip install twscrape python-dotenv fastapi uvicorn jinja2 httpx pandas lxml yfinance akshare
+# Install dependencies (using uv)
+uv sync
+
+# Or with pip
+pip install -e .
 
 # Config
 cp .env.example .env   # Fill in X credentials + LLM key
