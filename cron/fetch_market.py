@@ -244,6 +244,21 @@ def fetch_hk(conn):
     print(f"  snapshot_hk: {count} 条 @ {now[:19]}")
 
 
+def _in_trading_hours(market: str) -> bool:
+    """判断当前是否在该市场交易时段(基于 UTC,和机器时区无关)。"""
+    now_utc = datetime.now(timezone.utc)
+    if now_utc.weekday() >= 5:
+        return False
+    h = now_utc.hour + now_utc.minute / 60
+    if market == "cn":
+        return 1.5 <= h <= 7.0  # A股 9:30-15:00 北京 = UTC 1:30-7:00
+    elif market == "hk":
+        return 1.5 <= h <= 8.0  # 港股 9:30-16:00 HKT = UTC 1:30-8:00
+    elif market == "us":
+        return 13.5 <= h <= 20.0  # 美股 9:30-16:00 ET = UTC 13:30-20:00
+    return True
+
+
 def main():
     markets = sys.argv[1:] if len(sys.argv) > 1 else ["--market", "all"]
     market = "all"
@@ -254,14 +269,23 @@ def main():
     conn = get_db()
 
     if market in ("us", "all"):
-        print("拉取美股...")
-        fetch_us(conn)
+        if _in_trading_hours("us"):
+            print("拉取美股...")
+            fetch_us(conn)
+        else:
+            print("[跳过] 美股非交易时段")
     if market in ("cn", "all"):
-        print("拉取A股...")
-        fetch_cn(conn)
+        if _in_trading_hours("cn"):
+            print("拉取A股...")
+            fetch_cn(conn)
+        else:
+            print("[跳过] A股非交易时段")
     if market in ("hk", "all"):
-        print("拉取港股...")
-        fetch_hk(conn)
+        if _in_trading_hours("hk"):
+            print("拉取港股...")
+            fetch_hk(conn)
+        else:
+            print("[跳过] 港股非交易时段")
 
     cleanup_old_snapshots(conn)
     conn.close()
