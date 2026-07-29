@@ -97,8 +97,7 @@ def fetch_us(conn):
         for ticker, snap in resp.json().items():
             daily = snap.get("dailyBar", {})
             prev = snap.get("prevDailyBar", {})
-            trade = snap.get("latestTrade", {})
-            price = trade.get("p", 0) or daily.get("c", 0)
+            price = daily.get("c", 0)
             prev_close = prev.get("c", 0)
             if not prev_close or not price:
                 continue
@@ -177,8 +176,8 @@ def init_stock_hk(conn):
 
 
 def fetch_hk(conn):
-    """拉恒生科技快照写入 snapshot_hk。"""
-    import akshare as ak
+    """拉恒生科技快照写入 snapshot_hk。用 yfinance 批量拿 30 只。"""
+    import yfinance as yf
 
     codes = [r[0] for r in conn.execute("SELECT code FROM stock_hk").fetchall()]
     if not codes:
@@ -186,26 +185,30 @@ def fetch_hk(conn):
         init_stock_hk(conn)
         codes = [r[0] for r in conn.execute("SELECT code FROM stock_hk").fetchall()]
 
-    code_set = set(codes)
+    # 港股 yfinance 格式:00700→0700.HK
+    symbols = [c[-4:] + ".HK" for c in codes]
+    sym_to_code = {c[-4:] + ".HK": c for c in codes}
+
     now = datetime.now(timezone.utc).isoformat()
-
-    df = ak.stock_hk_spot()
-    df["code5"] = df["代码"].astype(str).str.zfill(5)
-    df = df[df["code5"].isin(code_set)]
-
     count = 0
-    for _, r in df.iterrows():
-        code = r["code5"]
-        price = float(r["最新价"]) if r["最新价"] else 0
-        change = float(r["涨跌幅"]) if r["涨跌幅"] else 0
-        if not price:
-            continue
-        cap = conn.execute("SELECT market_cap FROM stock_hk WHERE code=?", (code,)).fetchone()
-        market_cap = cap[0] if cap else 0
-        conn.execute(
-            "INSERT INTO snapshot_hk (code, price, change_pct, volume, market_cap, timestamp) VALUES (?,?,?,?,?,?)",
-            (code, round(price, 2), round(change, 2), 0, market_cap, now))
-        count += 1
+
+    tickers = yf.Tickers(" ".join(symbols))
+    for sym, code in sym_to_code.items():
+        try:
+            info = tickers.tickers[sym].fast_info
+            price = info.get("lastPrice", 0) or 0
+            prev = info.get("previousClose", 0) or 0
+            if not price or not prev:
+                continue
+            change_pct = (price - prev) / prev * 100
+            cap = conn.execute("SELECT market_cap FROM stock_hk WHERE code=?", (code,)).fetchone()
+            market_cap = cap[0] if cap else 0
+            conn.execute(
+                "INSERT INTO snapshot_hk (code, price, change_pct, volume, market_cap, timestamp) VALUES (?,?,?,?,?,?)",
+                (code, round(price, 2), round(change_pct, 2), 0, market_cap, now))
+            count += 1
+        except:
+            pass
     conn.commit()
     print(f"  snapshot_hk: {count} 条 @ {now[:19]}")
 
