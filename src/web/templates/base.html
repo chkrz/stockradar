@@ -12,8 +12,9 @@ a { color: #58a6ff; text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 nav { padding: 14px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #21262d; background: #0d1117; }
-nav .logo { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
-nav .logo span { color: #58a6ff; }
+nav .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
+nav .logo .wordmark { color: #fff; }
+nav .logo .wordmark span { color: #58a6ff; }
 nav .links { display: flex; gap: 24px; }
 nav .links a { color: #8b949e; text-decoration: none; font-size: 14px; font-weight: 500; padding: 4px 0; border-bottom: 2px solid transparent; transition: all 0.2s; }
 nav .links a:hover { color: #fff; text-decoration: none; }
@@ -50,7 +51,10 @@ tr:hover { background: #161b22; }
 </head>
 <body>
 <nav>
-  <a href="/" class="logo" style="text-decoration:none;">Stock<span>Radar</span></a>
+  <a href="/" class="logo" style="text-decoration:none;">
+    <img src="/static/favicon.svg" alt="" width="34" height="34">
+    <span class="wordmark">Stock<span>Radar</span></span>
+  </a>
   <div class="links">
     <a href="/market" class="{% block nav_sp500 %}{% endblock %}">S&P 500</a>
     <a href="/market/cn" class="{% block nav_hs300 %}{% endblock %}">HS300</a>

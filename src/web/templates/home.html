@@ -10,8 +10,9 @@
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
 
 nav { position: fixed; top: 0; width: 100%; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; z-index: 100; background: rgba(13,17,23,0.8); backdrop-filter: blur(12px); border-bottom: 1px solid #21262d; }
-nav .logo { font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
-nav .logo span { color: #58a6ff; }
+nav .logo { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; display: flex; align-items: center; gap: 11px; }
+nav .logo .wordmark { color: #fff; }
+nav .logo .wordmark span { color: #58a6ff; }
 nav .links { display: flex; gap: 28px; }
 nav .links a { color: #8b949e; text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
 nav .links a:hover { color: #fff; }
@@ -38,7 +39,10 @@ nav .links a:hover { color: #fff; }
 </head>
 <body>
 <nav>
-  <div class="logo">Stock<span>Radar</span></div>
+  <div class="logo">
+    <img src="/static/favicon.svg" alt="" width="40" height="40">
+    <span class="wordmark">Stock<span>Radar</span></span>
+  </div>
   <div class="links">
     <a href="/market">S&P 500</a>
     <a href="/market/cn">沪深300</a>
